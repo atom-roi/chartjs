@@ -1,20 +1,28 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <div>Chart_test</div>
+    <canvas
+      width="800"
+      height="400"
+      style="
+        display: block;
+        box-sizing: border-box;
+        height: 400px;
+        width: 800px;
+      "
+    ></canvas>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
 export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-}
+  name: "App",
+};
 </script>
+
+
+
+
 
 <style>
 #app {
