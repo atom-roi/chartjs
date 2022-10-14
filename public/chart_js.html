@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./utils.js" ></script>   
+ 
+    <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>  
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" integrity="sha512-ElRFoEQdI5Ht6kZvyzXhYG9NqjtkmlkfYk0wr6wHxU9JEHakS7UJZNeml5ALk+8IKlU6jDgMabC3vkumRokgJA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Document</title>
+   
+    <script>
+        const Utils = ChartUtils.init();
+        const DATA_COUNT = 7;
+        const NUMBER_CFG = {count: DATA_COUNT, min: -100, max: 100};
+
+       
+        
+       
+        const actions = [
+          {
+            name: "Randomize",
+            handler(chart) {
+              chart.data.datasets.forEach((dataset) => {
+                dataset.data = Utils.numbers({
+                  count: chart.data.labels.length,
+                  min: -100,
+                  max: 100,
+                });
+              });
+              chart.update();
+            },
+          },
+          {
+            name: "Add Dataset",
+            handler(chart) {
+              const data = chart.data;
+              const dsColor = Utils.namedColor(chart.data.datasets.length);
+              const newDataset = {
+                label: "Dataset " + (data.datasets.length + 1),
+                backgroundColor: Utils.transparentize(dsColor, 0.5),
+                borderColor: dsColor,
+                data: Utils.numbers({ count: data.labels.length, min: -100, max: 100 }),
+              };
+              chart.data.datasets.push(newDataset);
+              chart.update();
+            },
+          },
+          {
+            name: "Add Data",
+            handler(chart) {
+              const data = chart.data;
+              if (data.datasets.length > 0) {
+                data.labels = Utils.months({ count: data.labels.length + 1 });
+        
+                for (let index = 0; index < data.datasets.length; ++index) {
+                  data.datasets[index].data.push(Utils.rand(-100, 100));
+                }
+        
+                chart.update();
+              }
+            },
+          },
+          {
+            name: "Remove Dataset",
+            handler(chart) {
+              chart.data.datasets.pop();
+              chart.update();
+            },
+          },
+          {
+            name: "Remove Data",
+            handler(chart) {
+              chart.data.labels.splice(-1, 1); // remove the label first
+        
+              chart.data.datasets.forEach((dataset) => {
+                dataset.data.pop();
+              });
+        
+              chart.update();
+            },
+          },
+        ];
+
+      
+        </script>  
+    
+</head>
+<body>
+    <h1>라인차트그리기</h1>
+    <div><a data-v-2afd21f1="" class="chart-action">
+        Randomize
+      </a></div>
+    <canvas id="myChart" width="800" height="400" style="display: block; box-sizing: border-box; height: 400px; width: 800px;"
+  ></canvas>
+
+  <div id="myGrid" style="height: 200px; width:500px;" class="ag-theme-alpine"></div>
+  <script>
+
+    const chart = document.getElementById('myChart');
+    const labels = ["2022-07-01","2022/08/01","2022/09/01"];//columnDefs.map(x=>x.headerName);//["2022-07-01","2022-08-01","2022-09-01"];
+        
+        ;        const data = {
+                  labels: labels,
+                  datasets: [
+                    {
+                      label: "Dataset 1",
+                      data: [10,20,30],
+                      borderColor: Utils.CHART_COLORS.red,
+                      pointStyle: 'circle',
+                      pointRadius: 10,
+                      pointHoverRadius: 15
+                    },
+                    {
+                      label: "Dataset 2",
+                      data: [22,33,11],
+                      borderColor: Utils.CHART_COLORS.blue,
+                      backgroundColor: Utils.transparentize(Utils.CHART_COLORS.blue, 0.5),
+                    },
+                  ],
+                };
+                
+                const config = {
+                  type: "line",
+                  data: data,
+                  options: {
+                    responsive: false,
+                    plugins: {
+                      legend: {
+                        position: "top",
+                      },
+                      title: {
+                        display: true,
+                        text: "Chart.js Line Chart",
+                      },
+                    },
+                  },
+                };
+        var columnDefs = [
+            { headerName: "2022-07-01", field: "a1" },
+            { headerName: "2022-08-01", field: "a2" },
+            { headerName: "2022-09-01", field: "a3" },
+        ];
+
+        // specify the data
+        var rowData = [
+            { a1: 56, a2: 32, a3: 23 },
+            { a1: 20, a2: 36, a3: 44 },
+            { a1: 28, a2: 85, a3: 34 },
+        ];
+        const myChart = new Chart(
+            chart,
+            config,
+            actions
+        );
+        // let the grid know which columns and what data to use
+        var gridOptions = {
+        columnDefs: columnDefs,
+        rowData: rowData,
+        onCellClicked: function(event){
+            const data = myChart.data;
+              const dsColor = Utils.namedColor(myChart.data.datasets.length);
+              const newDataset = {
+                label: "Dataset " + (data.datasets.length + 1),
+                backgroundColor: Utils.transparentize(dsColor, 0.5),
+                borderColor: dsColor,
+                data: Utils.numbers({ count: data.labels.length, min: -100, max: 100 }),
+              };
+              myChart.data.datasets.push(newDataset);
+              myChart.update();
+            },
+        };
+
+        // setup the grid after the page has finished loading
+        document.addEventListener("DOMContentLoaded", function () {
+        var gridDiv = document.querySelector("#myGrid");
+        new agGrid.Grid(gridDiv, gridOptions);
+        });
+
+
+        console.log(rowData[0]);
+        
+       
+    
+ 
+      
+   
+        
+  </script>
+</body>
+</html>
