@@ -1,3 +1,4 @@
+//mywork
 var data;
 var grp_exam_cd = []; //chart config 기본
 var dgroup;
