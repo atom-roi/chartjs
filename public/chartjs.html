@@ -5,43 +5,74 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src="utils.js" />"></script>
-  <script src="chart.min.js?v2" />"></script>
+  <script src="utils.js"></script>
+  <script src="chart.min.js?v2"></script>
   <script src="common_flowsheet.js?v4"></script>
   <script src="ag-grid-community.min.noStyle.js"></script>
   <script src="d3.v5.min.js"></script>
   <script src="d3-array.v2.min.js"></script>
   <script src="chartjs-plugin-datalabels.min.js?v3"></script>
   <link rel="stylesheet" href="ag-grid.css" type="text/css">
-  <link rel="stylesheet" href="ag-theme-alpine.css" type="text/css">
+  <link rel="stylesheet" href="ag-theme-balham.css" type="text/css">
   <link rel="stylesheet" href="ag-grid.css" type="text/css">
   <style>
     .ag-header-cell-text{
       font-size:8px;
-      font-weight:normal;
+      font-weight:bold;
+      align-content: center;
     }
-    .itemPan ol  li{
-      background-color:red
+    .ag-theme-balham .ag-header {
+    font-family: "맑은 고딕";
     }
+    .ag-header-cell-label {
+   justify-content: center;
+}
+
+    .itemPan {float:left;width:250px;text-align: center;}
+    .chartAreaWrapper2 {
+        display:inline-block;
+        width:200px;
+        /* margin-left:10px; */
+        }
+ .itemPan ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    width: 250px;
+   
+}
+.itemPan li {
+    display:flow-root;
+    
+    text-decoration: none;
+}
+.itemPan li:nth-child(even){
+  background-color: white;
+  padding:3px;
+}
   </style>
 </head>
 <body>
   <div style="position:absolute;width: 90%;top:5px;overflow: auto;background: white;left: 5%;border: 1px solid beige;" id="fsheet">
     <button onclick="$('#fsheet').hide();" style="float:right;margin:15px">X</button>
-          <div class="chartWrapper" >
-              <div class="chartAreaWrapper">
-                  <div id="itemPan" style="width:200px" class="itemPan">
-                  
-                  </div>
-                   <div class="chartAreaWrapper2" style="height:300px;margin-left:200px" id="chartContainer">
-                       <canvas id="myChart" height="300" width="1700" ></canvas>
-                  </div>
+          
+          <div class="chartAreaWrapper" style="height:300px">
+                <div id="itemPan" class="itemPan" >
+                  <div style="background-color: darkseagreen;">항목</div>
+                    <ul id="itemul">
+                     </ul>
+                </div>
+               
+                <div class="chartAreaWrapper2"  id="chartContainer" style="height:300px" >
+                       <canvas id="myChart" height="300"></canvas>
+                </div>
+            
               </div>
-          </div>
-        <div style="width:3280px;margin:15px;border:1px solid black" id="divmyGrid">
-          <div id="myGrid" style="display: block; box-sizing: border-box; height: 200px; " class="ag-theme-alpine"></div>
+        <div style="width:3280px;margin:15px;border:1px solid black" id="divmyGrid" >
+          <div id="myGrid" style="display: block; box-sizing: border-box; height: 200px; " class="ag-theme-balham"></div>
         </div>
      </div>
+    
   <script>
     var d3d5 = d3;
     window.d3 = null;

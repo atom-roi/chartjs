@@ -3,6 +3,8 @@ var data;
 var grp_exam_cd = []; //chart config 기본
 var dgroup;
 var myChart;
+// 임시 변수
+
 const chartConfig = {
   type: "line",
   data: [],
@@ -23,16 +25,41 @@ const chartConfig = {
         formatter: function (value, context) {
           //console.log("formaating", value, context);
           var idx = context.dataIndex;
-
           return context.dataset.data[context.chart.data.labels[idx]];
         },
       },
     },
+    scales: {
+      x: {
+       
+        grid: {
+          display:true,
+        },
+        ticks: {
+          display:false
+        }
+      },
+      y: {
+        grid: {
+          display:false,
+        },
+        ticks: {
+          display:false
+        }
+      }
+    },
+    elements: {
+      point: {
+        
+
+        hoverRadius:10,
+      }
+    }
   },
 };
 // grid option 기본
-var gridOptions = {
-  columnDefs: setGridColumDef(),
+const gridOptions = {
+  columnDefs: [],
   rowData: [],
   defaultColDef: {
     editable: false,
@@ -43,140 +70,114 @@ var gridOptions = {
 
     const dsColor = Utils.namedColor(myChart.data.datasets.length);
 
-    // TODO 이미 바인딩 된 경우 Activate
-    if (myChart.data.datasets.find((x) => x.lable === event.data.exam_nm))
-      return;
-    // 항목 뺀 데이터만 바인딩
-    // div 항목 추가
-    // if (event.colDef.field == "exam_nm") {
-    var itemPan = document.querySelector("#itemPan");
+    
 
-    const ol = document.createElement("ol");
-    const li = document.createElement("li");
-    // function 추가
-    li.onclick = function () {
-      // 지울까?
-      // Activate
-    };
+     
+    const dbase = dgroup.get(grp_exam_cd.find(x=>x.examNm == event.data.exam_nm).examCd);
+    
+    // active 항목 없앰.
+    myChart.setActiveElements([{}]);
+    if(myChart.data.datasets.length>2)
+      myChart.data.datasets.splice(myChart.data.datasets.length - 2, 2);
+    // 검사 데이터가 안되어 있으면...
+    if (!myChart.data.datasets.find((x) => x.label === event.data.exam_nm) ) {
 
-    li.append(event.data.exam_nm);
-    ol.appendChild(li);
-    itemPan.appendChild(ol);
-    // }
+      const lb = event.data.exam_nm;
+      var clone = Object.assign({}, event.data);
+      delete clone.exam_nm;
+      for (const x in clone) {
+       
+        if (clone[x] === "") clone[x] =NaN;
+      }
 
-    const lb = event.data.exam_nm;
-    delete event.data.exam_nm;
-    const skipped = (ctx, value) =>
-      ctx.p0.skip || ctx.p1.skip ? value : undefined;
-    const newDataset = {
-      label: lb,
-      backgroundColor: dsColor,
-      borderColor: dsColor,
-      data: event.data,
-      spanGaps: true,
-      datalabels: {
-        display: true,
-        color: "black",
-        font: { size: 9, family: "맑은 고딕" },
-        align: "top",
-      },
-      // labels: Object.values(event.data),
-    };
+      // 검사값으로 차트 만들기.
+      const newDataset = {
+        label: lb,
+        backgroundColor: dsColor,
+        borderColor: dsColor,
+        data: clone,
+        spanGaps: true,
+        datalabels: {
+          display: true,
+          color: "black",
+          font: { size: 9, family: "맑은 고딕" },
+          align: "top",
+        },
+        // labels: Object.values(event.data),
+      };
+      myChart.data.datasets.push(newDataset);
 
-    const dbase = dgroup.get(grp_exam_cd[0]);
-    const rows2 = getBaseRowdata(dbase)[0];
-    console.log("하한값", rows2, "SDFASDF", event.data);
-    const newDataset2 = {
-      label: lb + "low",
-      backgroundColor: "blue",
-      borderColor: "blue",
-      data: rows2,
-      borderWidth: 0.5,
-      datalabels: {
-        display: false,
-      },
-      pointRadius: 0,
-      // labels: Object.values(event.data),
-    };
+      addItemDiv(dbase[0],dsColor);
+      myChart.update();
+    }
+   
+    if (myChart.data.datasets.length > 0 && event.column.instanceId > 0) {
+      // 차트 active 없앰
 
-    // const dbase = grp_exam_cd.get(event.data.exam_cd);
-    // console.log("DBASE", dbase);
-    // const newDataset3 = {
-    //   label: lb + "low",
-    //   backgroundColor: "black",
-    //   borderColor: "black",
-    //   //data: dbase,
-    //   borderWidth: 0.5,
-    //   datalabels: {
-    //     display: false,
-    //   },
-    //   pointRadius: 0, // labels: Object.values(event.data),
-    // };
-    // const newDataset3 = {
-    //   label: lb,
-    //   backgroundColor: dsColor,
-    //   borderColor: dsColor,
-    //   data: event.data,
+      //myChart.data.datasets[0].points[0].radius = 10;
+      var activElements = [];
+      for (var i = 0; i < myChart.data.datasets.length; i++) {
+        activElements.push({ datasetIndex: i, index: event.column.instanceId - 1 });
+      }
+      myChart.setActiveElements(activElements);
+ 
 
-    //   datalabels: {
-    //     display: true,
-    //     color: "black",
-    //     font: { size: 9, family: "맑은 고딕" },
-    //     align: "top",
-    //   },
-    //   // labels: Object.values(event.data),
-    // };
+      myChart.update();
+    }
+    // 상, 하한값 그려준다.
+    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseLowVal, 'blue'));
+    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseUplmtVal, 'red'));
 
-    myChart.data.datasets.push(newDataset);
-    myChart.data.datasets.push(newDataset2);
+    
+
+
+
     // myChart.data.datasets.push(newDataset3);
     myChart.update();
+
   },
 };
 
-function createChart(chartID, columens, dataset) {
-  Chart.defaults.scale.grid.display = false;
-  Chart.defaults.scale.ticks.display = false;
-  Chart.register(ChartDataLabels);
-  // Chart.defaults.set("plugins.datalabels", {
-  //   color: "black",
-  //   font: { size: 25, family: "맑은 고딕", wieght: "bold" },
-  //   labels: { value: { color: "black" } },
-  //   opacity: 1,
-  // });
-  //Chart.defaults.plubins.datalabels.display = true;
-  var chartDiv = document.querySelector(chartID);
-  //chartDiv.style.width = "9800px";
+function createGrid(gridID) {
 
-  myChart = new Chart(chartDiv, chartConfig);
-  myChart.width = 1700;
-  console.log(myChart);
-  //    var chartData = [];
+
+  // 컬럼 바인딩 
+  var columns = getColumDefs();
+  gridOptions.columnDefs = columns;
+
+  // 컬럼 카운트 만큼 그리드의 사이즈를 변경해보자.
+  var gridDiv = document.querySelector(gridID);
+
+  var divGrid = document.querySelector("#divmyGrid");
+ 
+  divGrid.style.width = gridOptions.columnDefs.length * 100 + 120 + "px";
+
+
+  let grid = new agGrid.Grid(gridDiv, gridOptions);
+  
+
+  // console.log(colums)
+  // Rows 바인딩.
+  gridOptions.api.setRowData(getRowData(gridOptions));  
+
+}
+
+function createChart(chartID, columens, dataset) {
+  Chart.register(ChartDataLabels);
+  
+  var chartDiv = document.querySelector(chartID);
+ 
+
+  chartDiv.width = gridOptions.columnDefs.length * 100 -200;
   //    columnDefs.forEach(x=>chartData.push(Utils.rand(/100, 100)));
   //    var labels=[];
   //    columnDefs.forEach(x=>labels.push(x.field) );
-}
-function createGrid(gridID) {
-  var gridDiv = document.querySelector(gridID);
-
-  let chartGrid = new agGrid.Grid(gridDiv, gridOptions);
-
-  // 그리드 생성후 data 바인딩.
-
-  let rows = setGridRows(gridOptions);
-
-  gridOptions.api.setRowData(rows);
-
-  var divGrid = document.querySelector("#divmyGrid");
-
-  divGrid.style.width = gridOptions.columnDefs.length * 100 + 20 + "px";
-  console.log(gridOptions.columnDefs.length * 100);
-  //gridOptions.api.setRowData(rows);
+  myChart = new Chart(chartDiv, chartConfig);
 }
 
-// DATA
-function setGridColumDef(grid) {
-  var columnDefs = [];
+// 컬럼
+function getColumDefs() {
+  var colums = [];
   // json 데이터에서 날짜를 뽑아서 컬럼을 생성 해준다.
   // 첫번째 컬럼은 검사명.
 
@@ -189,16 +190,26 @@ function setGridColumDef(grid) {
   });
 
   // 검사명 추가
-  columnDefs.push({ headerName: "항목명", field: "exam_nm" });
+  colums.push({ headerName: "항목명", field: "exam_nm", width: 200 });
 
   data.forEach((x) => {
-    if (grp_exam_cd.findIndex((cd) => cd === x.exam_cd) == -1)
-      grp_exam_cd.push(x.exam_cd);
+    if (grp_exam_cd.findIndex((cd) => cd.examCd === x.exam_cd) == -1)
+      grp_exam_cd.push({
+        examCd: x.exam_cd, examNm: x.exam_nm,
+      });
     //console.log(columnDefs.filter((c) => c.headerName === x.DT).length);
-    if (columnDefs.filter((c) => c.headerName === x.DT).length == 0)
-      columnDefs.push({
+    if (colums.filter((c) => c.headerName === x.DT).length == 0)
+       colums.push({
         headerName: x.DT,
         field: x.DT,
+        cellStyle: params => {
+          console.log("크기비교", x.examCd, params.value , x.baseLowVal);
+          if (params.value > x.baseLowVal) {
+              //mark police cells as red
+              return { backgroundColor: 'rgba(10,10,10,0.3)', textAlign: 'center'};
+          }
+          return {  textAlign: 'center'};
+      }
       });
   });
 
@@ -207,12 +218,12 @@ function setGridColumDef(grid) {
   //   columnDefs.push({ headerName: x, field: x });
   // });
 
-  return columnDefs;
+  return colums;
 }
 
 /* 그리드 데이터 만들기 Very Important */
-function setGridRows(gridPotions) {
-  // specify the data
+function getRowData() {
+  // DB에서 가져옴
   var rowData = dataFromCvs();
   var rows = [];
 
@@ -228,7 +239,7 @@ function setGridRows(gridPotions) {
       // 항목으로 다시 한번 그룹 치고 처리.
       let d = xdata.filter((y) => y.DT === gridOptions.columnDefs[index].field);
       if (d.length > 0) r[gridOptions.columnDefs[index].field] = d[0].val;
-      else r[gridOptions.columnDefs[index].field] = NaN;
+      else r[gridOptions.columnDefs[index].field] = "";
       // 값이 없을때 항목은 있으나 스킵.
     }
     rows.push(r);
@@ -236,58 +247,86 @@ function setGridRows(gridPotions) {
   return rows;
 }
 
-function getBaseRowdata(xdata) {
-  var rows = [];
+// 좌측 항목 표시 및 없애기
+function addItemDiv(data, color) {
+  // 항목 뺀 데이터만 바인딩
+  // div 항목 추가
+  // if (event.colDef.field == "exam_nm") {
+  var ul = document.querySelector("#itemul");
+  
+  const li = document.createElement("li");
+  const li2 = document.createElement("li");
+  // function 추가
+  li.onclick = function () {
+    removeData(data.exam_nm);
+    ul.removeChild(li);
+    ul.removeChild(li2);
+  };
+  li.append(data.exam_nm);
+  li.style.backgroundColor = color;  
+  li2.innerHTML = `<div style='float:left'>${data.baseLowVal}</div><div style='float:right'>${data.baseUplmtVal}</div>`;
+  ul.appendChild(li);
+  ul.appendChild(li2);
+}
+
+function getLimitDataSet(val,color) {
+
   var r = {}; //항목 명
-  r["exam_nm"] = xdata.exam_nm;
+  
   for (let index = 1; index < gridOptions.columnDefs.length; ++index) {
     // 날짜에 해당하는 데이터를 가져온다.
     // 항목으로 다시 한번 그룹 치고 처리.
-    let d = xdata.filter((y) => y.DT === gridOptions.columnDefs[index].field);
-    if (d.length > 0)
-      r[gridOptions.columnDefs[index].field] = d[0].babaseUplmtVal;
+    //let d = xdata.filter((y) => y.DT === gridOptions.columnDefs[index].field);
+
+    // 일직선으로 만든다.
+    // 첫번째와 마지막 값 넣어주고 일직선.
+    if (index == 1 || index == gridOptions.columnDefs.length-1)
+      r[gridOptions.columnDefs[index].field] = val;
     else r[gridOptions.columnDefs[index].field] = NaN;
     // 값이 없을때 항목은 있으나 스킵.
   }
-  rows.push(r);
-  console.log("하한값들", rows);
-  return rows;
+  const ds = {
+   // label: lb + "low",
+    backgroundColor: 'rgba(255, 165, 0, 0.1)',
+    borderColor: color,
+    data: r,
+    borderWidth: 0.5,
+    borderDash: [5, 5],
+    spanGaps: true,
+    datalabels: {
+      display: false,
+    },
+    fill: color=='red'?'-1':'',
+    pointRadius: 0,
+    // labels: Object.values(event.data),
+  };
+  return ds;
 }
 
-function getBaseUpData() {
-  var rowData = dataFromCvs();
-  var rows = [];
-  var r = {};
+//
+function removeData(nm) {
+  
+  // 먼저 상, 하한 값을 지운다.
+  // 이미 바인딩 된 차트가 있으면 상,하한 값 차트를 지워준다. 마지막 index +2
+  myChart.data.datasets.splice(myChart.data.datasets.length - 2, 2);
+  let idx = myChart.data.datasets.findIndex((x) => x.label === nm);
+  console.log(idx);
+  // 해당 idx 의 데이터 셋을 지운다.
+  myChart.data.datasets.splice(idx, 1);
+  
+  if (myChart.data.datasets.length > 0) {
 
-  //항목 명
-  r["exam_nm"] = rowData[0].exam_nm;
-  // 로우데이터 만들기
-  for (let index = 1; index < gridOptions.columnDefs.length; ++index) {
-    // 날짜에 해당하는 데이터를 가져온다.
-    // 항목으로 다시 한번 그룹 치고 처리.
-    let d = rowData.filter((y) => y.DT === gridOptions.columnDefs[index].field);
-    if (d.length > 0)
-      r[gridOptions.columnDefs[index].field] = d[0].baseUplmtVal;
-    else r[gridOptions.columnDefs[index].field] = "";
+    const dbase = dgroup.get(grp_exam_cd[0].examCd);
+    // 마지막 데이터셋의 상, 하한 값 차트를 추가 한다.
+    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseLowVal, 'blue'));
+    myChart.data.datasets.push(getLimitDataSet( dbase[0].baseUplmtVal ,'red'));
   }
-  rows.push(r);
-  return rows;
+
+  myChart.update();
 }
-
-function getDateRangeData(param1, param2) {
-  //param1은 시작일, param2는 종료일이다.
-  var res_day = [];
-  var ss_day = new Date(param1);
-  var ee_day = new Date(param2);
-  while (ss_day.getTime() <= ee_day.getTime()) {
-    var _mon_ = ss_day.getMonth() + 1;
-    _mon_ = _mon_ < 10 ? "0" + _mon_ : _mon_;
-    var _day_ = ss_day.getDate();
-    _day_ = _day_ < 10 ? "0" + _day_ : _day_;
-    res_day.push(ss_day.getFullYear() + "/" + _mon_ + "/" + _day_);
-    ss_day.setDate(ss_day.getDate() + 1);
-  }
-  return res_day;
+function chagneChartType(t) {
+  chartConfig.type = t;
+  myChart.update();
 }
 
 function dataFromCvs() {
@@ -305,7 +344,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.9,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2009/01/11",
       val: 2,
@@ -323,10 +362,10 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.1,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1997/03/11",
-      val: 1.1,
+      val: -1.1,
     },
     {
       1: 17188636,
@@ -341,7 +380,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/11/11",
       val: 1,
@@ -359,7 +398,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.5,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/12/11",
       val: 1.5,
@@ -377,10 +416,10 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.3,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2000/04/11",
-      val: 1.3,
+      val: -1.3,
     },
     {
       1: 17188636,
@@ -395,7 +434,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.2,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2000/02/11",
       val: 1.2,
@@ -413,7 +452,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 12,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2000/01/28",
       val: 1,
@@ -431,7 +470,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.3,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/11/30",
       val: 1.3,
@@ -449,7 +488,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.3,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/11/24",
       val: 1.3,
@@ -467,7 +506,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.4,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/11/10",
       val: 1.4,
@@ -485,7 +524,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.3,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/12/29",
       val: 1.3,
@@ -503,7 +542,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.4,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "1999/11/27",
       val: 1.4,
@@ -521,7 +560,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.2,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2000/07/14",
       val: 1.2,
@@ -539,7 +578,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 10.3,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2001/01/17",
       val: 1.3,
@@ -557,7 +596,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.6,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2000/10/18",
       val: 1.6,
@@ -575,7 +614,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 11.5,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2001/04/18",
       val: 1.5,
@@ -593,7 +632,7 @@ function dataFromCvs() {
       11: "AC0091",
       marRsltVal: 12.9,
       baseLowVal: 0,
-      babaseUplmtVal: 2,
+      baseUplmtVal: 2,
       16: "g/dl",
       DT: "2001/07/20",
       val: 1.9,
@@ -905,7 +944,312 @@ function dataFromCvs() {
       DT: "2001/07/20",
       val: 12.9,
     },
-
+    {
+      1: 17188636,
+      2: "20090109O171886360026470005",
+      3: "20100108L2000O01549",
+      4: "CRS",
+      5: "대장항문외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0085",
+      11: "AC0091",
+      marRsltVal: 11.9,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2009/01/21",
+      val: 31.9,
+    },
+    {
+      1: 17188636,
+      2: "19970319O171886360003070001",
+      3: "19970319L2000O00148",
+      4: "OS",
+      5: "정형외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.1,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1997/04/19",
+      val: 30.1,
+    },
+    {
+      1: 17188636,
+      2: "19991125O171886360006370002",
+      3: "19991125L2000I00086",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/11/23",
+      val: 30,
+    },
+    {
+      1: 17188636,
+      2: "19991215O171886360006470001",
+      3: "19991215L2000O00796",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 11.5,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/12/23",
+      val: 31.5,
+    },
+    {
+      1: 17188636,
+      2: "20000426O171886360007170004",
+      3: "20000628L2000O00834",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.3,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2000/04/13",
+      val: 30.3,
+    },
+    {
+      1: 17188636,
+      2: "20000225O171886360006870001",
+      3: "20000422L2000O00125",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.2,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2000/02/13",
+      val: 30.2,
+    },
+    {
+      1: 17188636,
+      2: "20000128O171886360006770001",
+      3: "20000225L2000O00119",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 12,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2000/01/13",
+      val: 32,
+    },
+    {
+      1: 17188636,
+      2: "19991130O171886360006370005",
+      3: "19991130L2000I00030",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.3,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/11/13",
+      val: 30.3,
+    },
+    {
+      1: 17188636,
+      2: "19991124O171886360006370010",
+      3: "19991124L2000I00042",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.3,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/11/13",
+      val: 30.3,
+    },
+    {
+      1: 17188636,
+      2: "19991110O171886360006270001",
+      3: "19991110L2000O00733",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 11.4,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/11/13",
+      val: 31.4,
+    },
+    {
+      1: 17188636,
+      2: "19991229O171886360006570001",
+      3: "20000128L2000O00176",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 11.3,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/12/13",
+      val: 31.3,
+    },
+    {
+      1: 17188636,
+      2: "19991127O171886360006370001",
+      3: "19991127L2000I00049",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.4,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "1999/11/13",
+      val: 30.4,
+    },
+    {
+      1: 17188636,
+      2: "20000714O171886360007770001",
+      3: "20001011L2000O00059",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 11.2,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2000/07/13",
+      val: 31.2,
+    },
+    {
+      1: 17188636,
+      2: "20010117O171886360008570001",
+      3: "20010416L2000O00146",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 10.3,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2001/01/13",
+      val: 30.3,
+    },
+    {
+      1: 17188636,
+      2: "20001018O171886360008270001",
+      3: "20010110L2000O00114",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 11.6,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2000/10/13",
+      val: 31.6,
+    },
+    {
+      1: 17188636,
+      2: "20010418O171886360010170001",
+      3: "20010712L2000O00546",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 11.5,
+      baseLowVal:10,
+        baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2001/04/13",
+      val: 31.5,
+    },
+    {
+      1: 17188636,
+      2: "20010720O171886360011170007",
+      3: "20011022L2000O00659",
+      4: "GS",
+      5: "일반외과",
+      exam_cd: "BD1111",
+       exam_nm: "DOMION",
+      9: 99,
+      10: "AC0091",
+      11: "AC0091",
+      marRsltVal: 12.9,
+      baseLowVal:10,
+    baseUplmtVal: 70,
+      16: "g/dl",
+      DT: "2001/07/13",
+      val: 32.9,
+    },
     // {
     //   1: 17188636,
     //   2: "20011116O171886360011970001",
@@ -919,7 +1263,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/11/16",
     //   val: 11.6,
@@ -937,7 +1281,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2002/02/15",
     //   val: 12.6,
@@ -955,7 +1299,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2003/08/08",
     //   val: 12,
@@ -973,7 +1317,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 13,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2003/06/11",
     //   val: 13,
@@ -991,7 +1335,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2002/09/06",
     //   val: 12.5,
@@ -1009,7 +1353,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 13.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2003/03/14",
     //   val: 13.1,
@@ -1027,7 +1371,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.3,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2003/12/17",
     //   val: 11.3,
@@ -1045,7 +1389,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2004/06/16",
     //   val: 12,
@@ -1063,7 +1407,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2004/12/15",
     //   val: 11.8,
@@ -1081,7 +1425,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2005/12/07",
     //   val: 12,
@@ -1099,7 +1443,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2006/11/29",
     //   val: 12.4,
@@ -1117,7 +1461,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2007/11/28",
     //   val: 12.4,
@@ -1135,7 +1479,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/08/14",
     //   val: 10,
@@ -1153,7 +1497,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2003/09/02",
     //   val: 12,
@@ -1171,7 +1515,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2003/09/02",
     //   val: 12,
@@ -1189,7 +1533,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2004/03/15",
     //   val: 11.8,
@@ -1207,7 +1551,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2004/03/15",
     //   val: 11.8,
@@ -1225,7 +1569,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2005/06/20",
     //   val: 11.6,
@@ -1243,7 +1587,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2005/06/20",
     //   val: 11.6,
@@ -1261,7 +1605,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2008/09/29",
     //   val: 11.2,
@@ -1279,7 +1623,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2008/09/29",
     //   val: 11.2,
@@ -1297,7 +1641,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2010/10/06",
     //   val: 12.1,
@@ -1315,7 +1659,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2010/10/06",
     //   val: 12.1,
@@ -1333,7 +1677,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2010/12/15",
     //   val: 12.8,
@@ -1351,7 +1695,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2010/12/15",
     //   val: 12.8,
@@ -1369,7 +1713,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2012/02/08",
     //   val: 12.7,
@@ -1387,7 +1731,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2012/02/08",
     //   val: 12.7,
@@ -1405,7 +1749,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2013/10/15",
     //   val: 11.4,
@@ -1423,7 +1767,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2013/10/15",
     //   val: 11.4,
@@ -1441,7 +1785,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/06/29",
     //   val: 10.4,
@@ -1459,7 +1803,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/06/29",
     //   val: 10.4,
@@ -1477,7 +1821,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/09/21",
     //   val: 10.4,
@@ -1495,7 +1839,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/09/21",
     //   val: 10.4,
@@ -1513,7 +1857,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/03/30",
     //   val: 10,
@@ -1531,7 +1875,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/03/30",
     //   val: 10,
@@ -1549,7 +1893,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2014/12/31",
     //   val: 10.9,
@@ -1567,7 +1911,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2014/12/31",
     //   val: 10.9,
@@ -1585,7 +1929,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2016/09/19",
     //   val: 11,
@@ -1603,7 +1947,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2016/09/19",
     //   val: 11,
@@ -1621,7 +1965,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2016/06/20",
     //   val: 11.6,
@@ -1639,7 +1983,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2016/06/20",
     //   val: 11.6,
@@ -1657,7 +2001,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/12/21",
     //   val: 10.6,
@@ -1675,7 +2019,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2015/12/21",
     //   val: 10.6,
@@ -1693,7 +2037,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/03/20",
     //   val: 11.2,
@@ -1711,7 +2055,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/03/20",
     //   val: 11.2,
@@ -1729,7 +2073,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2016/12/19",
     //   val: 11.2,
@@ -1747,7 +2091,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2016/12/19",
     //   val: 11.2,
@@ -1765,7 +2109,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/16",
     //   val: 12.5,
@@ -1783,7 +2127,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/09/18",
     //   val: 11,
@@ -1801,7 +2145,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/09/18",
     //   val: 11,
@@ -1819,7 +2163,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/06/19",
     //   val: 10.8,
@@ -1837,7 +2181,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/06/19",
     //   val: 10.8,
@@ -1855,7 +2199,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/11/07",
     //   val: 9.4,
@@ -1873,7 +2217,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/22",
     //   val: 10.1,
@@ -1891,7 +2235,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/11/09",
     //   val: 10.8,
@@ -1909,7 +2253,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/23",
     //   val: 10,
@@ -1927,7 +2271,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/19",
     //   val: 9.9,
@@ -1945,7 +2289,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/24",
     //   val: 11.4,
@@ -1963,7 +2307,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/18",
     //   val: 9.8,
@@ -1981,7 +2325,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/17",
     //   val: 10.1,
@@ -1999,7 +2343,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/30",
     //   val: 10.1,
@@ -2017,7 +2361,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/10/20",
     //   val: 9.9,
@@ -2035,7 +2379,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/12/19",
     //   val: 10.6,
@@ -2053,7 +2397,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/12/19",
     //   val: 10.6,
@@ -2071,7 +2415,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/01/16",
     //   val: 11,
@@ -2089,7 +2433,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/01/16",
     //   val: 11,
@@ -2107,7 +2451,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2017/12/22",
     //   val: 10.5,
@@ -2125,7 +2469,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/02/13",
     //   val: 10.1,
@@ -2143,7 +2487,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/02/13",
     //   val: 10.1,
@@ -2161,7 +2505,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/04/24",
     //   val: 11,
@@ -2179,7 +2523,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/04/24",
     //   val: 11,
@@ -2197,7 +2541,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/06/21",
     //   val: 10.7,
@@ -2215,7 +2559,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/06/19",
     //   val: 9.8,
@@ -2233,7 +2577,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/06/19",
     //   val: 9.8,
@@ -2251,7 +2595,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/04/06",
     //   val: 10.8,
@@ -2269,7 +2613,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/28",
     //   val: 9.7,
@@ -2287,7 +2631,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/03/12",
     //   val: 9.9,
@@ -2305,7 +2649,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/21",
     //   val: 9.2,
@@ -2323,7 +2667,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/02",
     //   val: 10.9,
@@ -2341,7 +2685,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/01/26",
     //   val: 11.2,
@@ -2359,7 +2703,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.3,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/23",
     //   val: 9.3,
@@ -2377,7 +2721,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/22",
     //   val: 9.5,
@@ -2395,7 +2739,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/20",
     //   val: 9.8,
@@ -2413,7 +2757,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/03/29",
     //   val: 10,
@@ -2431,7 +2775,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/02/27",
     //   val: 9.5,
@@ -2449,7 +2793,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/08/08",
     //   val: 12.9,
@@ -2467,7 +2811,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.3,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/05/14",
     //   val: 11.3,
@@ -2485,7 +2829,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/07/12",
     //   val: 12.2,
@@ -2503,7 +2847,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/09/26",
     //   val: 11.7,
@@ -2521,7 +2865,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/04/16",
     //   val: 10.6,
@@ -2539,7 +2883,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/04/09",
     //   val: 10.4,
@@ -2557,7 +2901,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.3,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/06/11",
     //   val: 11.3,
@@ -2575,7 +2919,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.8,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/12/26",
     //   val: 11.8,
@@ -2593,7 +2937,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2001/12/26",
     //   val: 12.4,
@@ -2611,7 +2955,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.1,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2011/05/13",
     //   val: 11.1,
@@ -2629,7 +2973,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2011/05/12",
     //   val: 10.5,
@@ -2647,7 +2991,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2011/05/18",
     //   val: 11.6,
@@ -2665,7 +3009,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2011/05/18",
     //   val: 10.4,
@@ -2683,7 +3027,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.2,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2011/05/16",
     //   val: 11.2,
@@ -2701,7 +3045,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2007/04/03",
     //   val: 12.6,
@@ -2719,7 +3063,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2007/04/03",
     //   val: 12.6,
@@ -2737,7 +3081,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2007/04/03",
     //   val: 12.6,
@@ -2755,7 +3099,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2007/04/03",
     //   val: 12.6,
@@ -2773,7 +3117,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 12.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2007/04/03",
     //   val: 12.6,
@@ -2791,7 +3135,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 11.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2009/07/28",
     //   val: 11.7,
@@ -2809,7 +3153,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.5,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "1997/05/19",
     //   val: 10.5,
@@ -2827,7 +3171,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 9.9,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2011/05/11",
     //   val: 9.9,
@@ -2845,7 +3189,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 10.7,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2018/06/22",
     //   val: 10.7,
@@ -2863,7 +3207,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 8.4,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2019/02/25",
     //   val: 8.4,
@@ -2881,7 +3225,7 @@ function dataFromCvs() {
     //   11: "AC0091",
     //   marRsltVal: 8.6,
     //   baseLowVal: 0,
-    //   babaseUplmtVal: 2,
+    //   baseUplmtVal: 2,
     //   16: "g/dl",
     //   DT: "2019/02/24",
     //   val: 8.6,
