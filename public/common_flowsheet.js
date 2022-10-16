@@ -1,13 +1,16 @@
+
+
 //mywork
 var data;
-var grp_exam_cd = []; //chart config 기본
+var grp_examCd = []; 
 var dgroup;
 var myChart;
 // 임시 변수
-
+var lineColor = ['yellow', 'green','blue','red', 'green','blue','red']
 const chartConfig = {
   type: "line",
   data: [],
+
   options: {
     responsive: false,
     plugins: {
@@ -31,27 +34,33 @@ const chartConfig = {
     },
     scales: {
       x: {
-       
         grid: {
-          display:true,
+          lineWidth: 58,
         },
         ticks: {
           display:false
-        }
+        },
+
+        
       },
       y: {
+      
+        title: {
+          display: true,
+          text: '    ',
+        },
         grid: {
-          display:false,
+          display: false,
+          
         },
         ticks: {
           display:false
-        }
+        },
+         
       }
     },
     elements: {
       point: {
-        
-
         hoverRadius:10,
       }
     }
@@ -63,30 +72,30 @@ const gridOptions = {
   rowData: [],
   defaultColDef: {
     editable: false,
-    width: 100,
+    resizable: false,
+    sortable: false,
+    wrapText: true,
+    width: 60,
+    autoHeight: true,
   },
   onCellClicked: function (event) {
     console.log(event);
 
-    const dsColor = Utils.namedColor(myChart.data.datasets.length);
-
-    
-
-     
-    const dbase = dgroup.get(grp_exam_cd.find(x=>x.examNm == event.data.exam_nm).examCd);
+    const dsColor = lineColor[myChart.data.datasets.length]; //Utils.namedColor(myChart.data.datasets.length);
+    const dbase = dgroup.get(event.data.examCd);
     
     // active 항목 없앰.
     myChart.setActiveElements([{}]);
     if(myChart.data.datasets.length>2)
       myChart.data.datasets.splice(myChart.data.datasets.length - 2, 2);
     // 검사 데이터가 안되어 있으면...
-    if (!myChart.data.datasets.find((x) => x.label === event.data.exam_nm) ) {
+    if (!myChart.data.datasets.find((x) => x.label === event.data.examNm) ) {
 
-      const lb = event.data.exam_nm;
+      const lb = event.data.examNm;
       var clone = Object.assign({}, event.data);
-      delete clone.exam_nm;
+      delete clone.examNm;
+      delete clone.examCd;
       for (const x in clone) {
-       
         if (clone[x] === "") clone[x] =NaN;
       }
 
@@ -105,28 +114,37 @@ const gridOptions = {
         },
         // labels: Object.values(event.data),
       };
-      myChart.data.datasets.push(newDataset);
 
+      myChart.data.datasets.push(newDataset);
       addItemDiv(dbase[0],dsColor);
       myChart.update();
     }
    
+
+    // ACTIVATION 차트
     if (myChart.data.datasets.length > 0 && event.column.instanceId > 0) {
       // 차트 active 없앰
 
       //myChart.data.datasets[0].points[0].radius = 10;
       var activElements = [];
       for (var i = 0; i < myChart.data.datasets.length; i++) {
-        activElements.push({ datasetIndex: i, index: event.column.instanceId - 1 });
+        activElements.push({ datasetIndex: i, index: event.column.instanceId - 2 });
       }
-      myChart.setActiveElements(activElements);
- 
 
+
+      myChart.config.options.scales.x.grid.color = (x) => {
+        if (x.index == event.column.instanceId - 2)
+          return 'rgb(102,204,255)';
+        else
+          return 'rgb(245,245,247)';
+      };
+
+      myChart.setActiveElements(activElements);
       myChart.update();
     }
     // 상, 하한값 그려준다.
-    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseLowVal, 'blue'));
-    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseUplmtVal, 'red'));
+    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseLowVal, 'low'));
+    myChart.data.datasets.push(getLimitDataSet(dbase[0].baseUplmtVal, 'up'));
 
     
 
@@ -139,8 +157,6 @@ const gridOptions = {
 };
 
 function createGrid(gridID) {
-
-
   // 컬럼 바인딩 
   var columns = getColumDefs();
   gridOptions.columnDefs = columns;
@@ -150,7 +166,7 @@ function createGrid(gridID) {
 
   var divGrid = document.querySelector("#divmyGrid");
  
-  divGrid.style.width = gridOptions.columnDefs.length * 100 + 120 + "px";
+  divGrid.style.width = gridOptions.columnDefs.length * 60 + 120 + "px";
 
 
   let grid = new agGrid.Grid(gridDiv, gridOptions);
@@ -167,11 +183,13 @@ function createChart(chartID, columens, dataset) {
   
   var chartDiv = document.querySelector(chartID);
  
-
-  chartDiv.width = gridOptions.columnDefs.length * 100 -200;
+ 
+  
+  chartDiv.width = gridOptions.columnDefs.length * 60 -160;
   //    columnDefs.forEach(x=>chartData.push(Utils.rand(/100, 100)));
   //    var labels=[];
   //    columnDefs.forEach(x=>labels.push(x.field) );
+  // chartDiv.style.backgroundColor = 'gray';
   myChart = new Chart(chartDiv, chartConfig);
 }
 
@@ -189,27 +207,28 @@ function getColumDefs() {
     return a.DT > b.DT ? 1 : -1;
   });
 
-  // 검사명 추가
-  colums.push({ headerName: "항목명", field: "exam_nm", width: 200 });
 
+  // 검사명 // 검사코드
+  colums.push({ headerName: "항목명", field: "examNm", width: 140 });
+  colums.push({ headerName: "examCd", field: "examCd", width: 0, hide: "true" });
   data.forEach((x) => {
-    if (grp_exam_cd.findIndex((cd) => cd.examCd === x.exam_cd) == -1)
-      grp_exam_cd.push({
-        examCd: x.exam_cd, examNm: x.exam_nm,
-      });
+    if (grp_examCd.findIndex((cd) => cd.examCd === x.examCd) == -1)
+      grp_examCd.push({ examCd: x.examCd, examNm: x.examNm, });
+    
     //console.log(columnDefs.filter((c) => c.headerName === x.DT).length);
-    if (colums.filter((c) => c.headerName === x.DT).length == 0)
-       colums.push({
-        headerName: x.DT,
+    if (colums.filter((c) => c.field === x.DT).length == 0)
+      colums.push({
+        headerName: x.DT.replace('/',' '),
         field: x.DT,
         cellStyle: params => {
-          console.log("크기비교", x.examCd, params.value , x.baseLowVal);
+          /* todo 하한,상한 값 체크후 백그라운드*/
           if (params.value > x.baseLowVal) {
-              //mark police cells as red
-              return { backgroundColor: 'rgba(10,10,10,0.3)', textAlign: 'center'};
+            //mark police cells as red
+            return { backgroundColor: '#aab6fe', textAlign: 'center' };
           }
-          return {  textAlign: 'center'};
-      }
+          return { textAlign: 'center' };
+        },
+        
       });
   });
 
@@ -228,13 +247,15 @@ function getRowData() {
   var rows = [];
 
   // 로우데이터 만들기
-  // exam_cd 로 group by 해야함.
-  dgroup = d3d5.group(rowData, (d) => d.exam_cd);
+  // examCd 로 group by 해야함.
+  dgroup = d3d5.group(rowData, (d) => d.examCd);
 
   dgroup.forEach(function (xdata) {
     var r = {}; //항목 명
-    r["exam_nm"] = xdata[0].exam_nm;
-    for (let index = 1; index < gridOptions.columnDefs.length; ++index) {
+    r["examNm"] = xdata[0].examNm;
+    r["examCd"] = xdata[0].examCd;
+
+    for (let index = 2; index < gridOptions.columnDefs.length; ++index) {
       // 날짜에 해당하는 데이터를 가져온다.
       // 항목으로 다시 한번 그룹 치고 처리.
       let d = xdata.filter((y) => y.DT === gridOptions.columnDefs[index].field);
@@ -244,6 +265,7 @@ function getRowData() {
     }
     rows.push(r);
   });
+
   return rows;
 }
 
@@ -251,43 +273,45 @@ function getRowData() {
 function addItemDiv(data, color) {
   // 항목 뺀 데이터만 바인딩
   // div 항목 추가
-  // if (event.colDef.field == "exam_nm") {
+  // if (event.colDef.field == "examNm") {
   var ul = document.querySelector("#itemul");
   
   const li = document.createElement("li");
   const li2 = document.createElement("li");
   // function 추가
   li.onclick = function () {
-    removeData(data.exam_nm);
+    removeData(data.examNm);
     ul.removeChild(li);
     ul.removeChild(li2);
   };
-  li.append(data.exam_nm);
+  li.append(data.examNm);
   li.style.backgroundColor = color;  
   li2.innerHTML = `<div style='float:left'>${data.baseLowVal}</div><div style='float:right'>${data.baseUplmtVal}</div>`;
   ul.appendChild(li);
   ul.appendChild(li2);
 }
 
-function getLimitDataSet(val,color) {
+function getLimitDataSet(val, lvl) {
 
   var r = {}; //항목 명
-  
-  for (let index = 1; index < gridOptions.columnDefs.length; ++index) {
+  var color = lvl === 'low' ? 'blue' : 'red';
+
+  for (let index = 2; index < gridOptions.columnDefs.length; ++index) {
     // 날짜에 해당하는 데이터를 가져온다.
     // 항목으로 다시 한번 그룹 치고 처리.
     //let d = xdata.filter((y) => y.DT === gridOptions.columnDefs[index].field);
-
+    
     // 일직선으로 만든다.
     // 첫번째와 마지막 값 넣어주고 일직선.
-    if (index == 1 || index == gridOptions.columnDefs.length-1)
+    if (index == 2 || index == gridOptions.columnDefs.length-1)
       r[gridOptions.columnDefs[index].field] = val;
     else r[gridOptions.columnDefs[index].field] = NaN;
     // 값이 없을때 항목은 있으나 스킵.
   }
+  
   const ds = {
    // label: lb + "low",
-    backgroundColor: 'rgba(255, 165, 0, 0.1)',
+    backgroundColor: 'rgba(204, 204, 204,0.3)',
     borderColor: color,
     data: r,
     borderWidth: 0.5,
@@ -296,7 +320,7 @@ function getLimitDataSet(val,color) {
     datalabels: {
       display: false,
     },
-    fill: color=='red'?'-1':'',
+    fill: lvl=='up'?'-1':'',
     pointRadius: 0,
     // labels: Object.values(event.data),
   };
@@ -310,13 +334,13 @@ function removeData(nm) {
   // 이미 바인딩 된 차트가 있으면 상,하한 값 차트를 지워준다. 마지막 index +2
   myChart.data.datasets.splice(myChart.data.datasets.length - 2, 2);
   let idx = myChart.data.datasets.findIndex((x) => x.label === nm);
-  console.log(idx);
+
   // 해당 idx 의 데이터 셋을 지운다.
   myChart.data.datasets.splice(idx, 1);
   
   if (myChart.data.datasets.length > 0) {
 
-    const dbase = dgroup.get(grp_exam_cd[0].examCd);
+    const dbase = dgroup.get(grp_examCd[0].examCd);
     // 마지막 데이터셋의 상, 하한 값 차트를 추가 한다.
     myChart.data.datasets.push(getLimitDataSet(dbase[0].baseLowVal, 'blue'));
     myChart.data.datasets.push(getLimitDataSet( dbase[0].baseUplmtVal ,'red'));
@@ -337,8 +361,8 @@ function dataFromCvs() {
       3: "20100108L2000O01549",
       4: "CRS",
       5: "대장항문외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0085",
       11: "AC0091",
@@ -355,8 +379,8 @@ function dataFromCvs() {
       3: "19970319L2000O00148",
       4: "OS",
       5: "정형외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -373,8 +397,8 @@ function dataFromCvs() {
       3: "19991125L2000I00086",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -391,8 +415,8 @@ function dataFromCvs() {
       3: "19991215L2000O00796",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -409,8 +433,8 @@ function dataFromCvs() {
       3: "20000628L2000O00834",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -427,8 +451,8 @@ function dataFromCvs() {
       3: "20000422L2000O00125",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -445,8 +469,8 @@ function dataFromCvs() {
       3: "20000225L2000O00119",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -463,8 +487,8 @@ function dataFromCvs() {
       3: "19991130L2000I00030",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -481,8 +505,8 @@ function dataFromCvs() {
       3: "19991124L2000I00042",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -499,8 +523,8 @@ function dataFromCvs() {
       3: "19991110L2000O00733",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -517,8 +541,8 @@ function dataFromCvs() {
       3: "20000128L2000O00176",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -535,8 +559,8 @@ function dataFromCvs() {
       3: "19991127L2000I00049",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -553,8 +577,8 @@ function dataFromCvs() {
       3: "20001011L2000O00059",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -571,8 +595,8 @@ function dataFromCvs() {
       3: "20010416L2000O00146",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -589,8 +613,8 @@ function dataFromCvs() {
       3: "20010110L2000O00114",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -607,8 +631,8 @@ function dataFromCvs() {
       3: "20010712L2000O00546",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -625,8 +649,8 @@ function dataFromCvs() {
       3: "20011022L2000O00659",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0085",
-      exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+      examCd: "AC0085",
+      examNm: "CBC (Qn)[ChemR/I],Blood(G)",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -644,8 +668,8 @@ function dataFromCvs() {
       3: "20100108L2000O01549",
       4: "CRS",
       5: "대장항문외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0085",
       11: "AC0091",
@@ -662,8 +686,8 @@ function dataFromCvs() {
       3: "19970319L2000O00148",
       4: "OS",
       5: "정형외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -680,8 +704,8 @@ function dataFromCvs() {
       3: "19991125L2000I00086",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -698,8 +722,8 @@ function dataFromCvs() {
       3: "19991215L2000O00796",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -716,8 +740,8 @@ function dataFromCvs() {
       3: "20000628L2000O00834",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -734,8 +758,8 @@ function dataFromCvs() {
       3: "20000422L2000O00125",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -752,8 +776,8 @@ function dataFromCvs() {
       3: "20000225L2000O00119",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -770,8 +794,8 @@ function dataFromCvs() {
       3: "19991130L2000I00030",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -788,8 +812,8 @@ function dataFromCvs() {
       3: "19991124L2000I00042",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -806,8 +830,8 @@ function dataFromCvs() {
       3: "19991110L2000O00733",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -824,8 +848,8 @@ function dataFromCvs() {
       3: "20000128L2000O00176",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -842,8 +866,8 @@ function dataFromCvs() {
       3: "19991127L2000I00049",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -860,8 +884,8 @@ function dataFromCvs() {
       3: "20001011L2000O00059",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -878,8 +902,8 @@ function dataFromCvs() {
       3: "20010416L2000O00146",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -896,8 +920,8 @@ function dataFromCvs() {
       3: "20010110L2000O00114",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -914,8 +938,8 @@ function dataFromCvs() {
       3: "20010712L2000O00546",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -932,8 +956,8 @@ function dataFromCvs() {
       3: "20011022L2000O00659",
       4: "GS",
       5: "일반외과",
-      exam_cd: "AC0055",
-      exam_nm: "WBC",
+      examCd: "AC0055",
+      examNm: "WBC",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -950,8 +974,8 @@ function dataFromCvs() {
       3: "20100108L2000O01549",
       4: "CRS",
       5: "대장항문외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0085",
       11: "AC0091",
@@ -968,8 +992,8 @@ function dataFromCvs() {
       3: "19970319L2000O00148",
       4: "OS",
       5: "정형외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -986,8 +1010,8 @@ function dataFromCvs() {
       3: "19991125L2000I00086",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1004,8 +1028,8 @@ function dataFromCvs() {
       3: "19991215L2000O00796",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1022,8 +1046,8 @@ function dataFromCvs() {
       3: "20000628L2000O00834",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1040,8 +1064,8 @@ function dataFromCvs() {
       3: "20000422L2000O00125",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1058,8 +1082,8 @@ function dataFromCvs() {
       3: "20000225L2000O00119",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1076,8 +1100,8 @@ function dataFromCvs() {
       3: "19991130L2000I00030",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1094,8 +1118,8 @@ function dataFromCvs() {
       3: "19991124L2000I00042",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1112,8 +1136,8 @@ function dataFromCvs() {
       3: "19991110L2000O00733",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1130,8 +1154,8 @@ function dataFromCvs() {
       3: "20000128L2000O00176",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1148,8 +1172,8 @@ function dataFromCvs() {
       3: "19991127L2000I00049",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1166,8 +1190,8 @@ function dataFromCvs() {
       3: "20001011L2000O00059",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1184,8 +1208,8 @@ function dataFromCvs() {
       3: "20010416L2000O00146",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1202,8 +1226,8 @@ function dataFromCvs() {
       3: "20010110L2000O00114",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1220,8 +1244,8 @@ function dataFromCvs() {
       3: "20010712L2000O00546",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1238,8 +1262,8 @@ function dataFromCvs() {
       3: "20011022L2000O00659",
       4: "GS",
       5: "일반외과",
-      exam_cd: "BD1111",
-       exam_nm: "DOMION",
+      examCd: "BD1111",
+       examNm: "DOMION",
       9: 99,
       10: "AC0091",
       11: "AC0091",
@@ -1256,8 +1280,8 @@ function dataFromCvs() {
     //   3: "20020209L2000O00193",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1274,8 +1298,8 @@ function dataFromCvs() {
     //   3: "20020809L2000O00159",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1292,8 +1316,8 @@ function dataFromCvs() {
     //   3: "20030808L2000O00319",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1310,8 +1334,8 @@ function dataFromCvs() {
     //   3: "20031210L2000O00484",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1328,8 +1352,8 @@ function dataFromCvs() {
     //   3: "20030307L2000O00073",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1346,8 +1370,8 @@ function dataFromCvs() {
     //   3: "20030602L2000O00763",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1364,8 +1388,8 @@ function dataFromCvs() {
     //   3: "20040611L2000O00895",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1382,8 +1406,8 @@ function dataFromCvs() {
     //   3: "20041208L2000O00461",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1400,8 +1424,8 @@ function dataFromCvs() {
     //   3: "20051125L2000O01044",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1418,8 +1442,8 @@ function dataFromCvs() {
     //   3: "20061122L2000O01408",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1436,8 +1460,8 @@ function dataFromCvs() {
     //   3: "20071121L2000O00669",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1454,8 +1478,8 @@ function dataFromCvs() {
     //   3: "20081222L2000O01903",
     //   4: "GS",
     //   5: "일반외과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1472,8 +1496,8 @@ function dataFromCvs() {
     //   3: "20180918L2000O02411",
     //   4: "ACC",
     //   5: "암통합진료센터",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1490,8 +1514,8 @@ function dataFromCvs() {
     //   3: "20030902L2000O00636",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1508,8 +1532,8 @@ function dataFromCvs() {
     //   3: "20030902L2000O00636",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1526,8 +1550,8 @@ function dataFromCvs() {
     //   3: "20040419L2000O00948",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1544,8 +1568,8 @@ function dataFromCvs() {
     //   3: "20040419L2000O00948",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -1562,8 +1586,8 @@ function dataFromCvs() {
     //   3: "20050725L2000O01347",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1580,8 +1604,8 @@ function dataFromCvs() {
     //   3: "20050725L2000O01347",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1598,8 +1622,8 @@ function dataFromCvs() {
     //   3: "20081203L2000O01938",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1616,8 +1640,8 @@ function dataFromCvs() {
     //   3: "20081203L2000O01938",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1634,8 +1658,8 @@ function dataFromCvs() {
     //   3: "20101215L2000O02157",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1652,8 +1676,8 @@ function dataFromCvs() {
     //   3: "20101215L2000O02157",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1670,8 +1694,8 @@ function dataFromCvs() {
     //   3: "20110223L2000O02310",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1688,8 +1712,8 @@ function dataFromCvs() {
     //   3: "20110223L2000O02310",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1706,8 +1730,8 @@ function dataFromCvs() {
     //   3: "20120417L2000O02899",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1724,8 +1748,8 @@ function dataFromCvs() {
     //   3: "20120417L2000O02899",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1742,8 +1766,8 @@ function dataFromCvs() {
     //   3: "20131021L2000O02533",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1760,8 +1784,8 @@ function dataFromCvs() {
     //   3: "20131021L2000O02533",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1778,8 +1802,8 @@ function dataFromCvs() {
     //   3: "20150921L2000O02386",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1796,8 +1820,8 @@ function dataFromCvs() {
     //   3: "20150921L2000O02386",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1814,8 +1838,8 @@ function dataFromCvs() {
     //   3: "20151221L2000O03106",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1832,8 +1856,8 @@ function dataFromCvs() {
     //   3: "20151221L2000O03106",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1850,8 +1874,8 @@ function dataFromCvs() {
     //   3: "20150629L2000O02638",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1868,8 +1892,8 @@ function dataFromCvs() {
     //   3: "20150629L2000O02638",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1886,8 +1910,8 @@ function dataFromCvs() {
     //   3: "20150330L2000O02336",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1904,8 +1928,8 @@ function dataFromCvs() {
     //   3: "20150330L2000O02336",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1922,8 +1946,8 @@ function dataFromCvs() {
     //   3: "20161219L2000O02939",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1940,8 +1964,8 @@ function dataFromCvs() {
     //   3: "20161219L2000O02939",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1958,8 +1982,8 @@ function dataFromCvs() {
     //   3: "20160919L2000O03614",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1976,8 +2000,8 @@ function dataFromCvs() {
     //   3: "20160919L2000O03614",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -1994,8 +2018,8 @@ function dataFromCvs() {
     //   3: "20160321L2000O02724",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2012,8 +2036,8 @@ function dataFromCvs() {
     //   3: "20160321L2000O02724",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2030,8 +2054,8 @@ function dataFromCvs() {
     //   3: "20170619L2000O02803",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2048,8 +2072,8 @@ function dataFromCvs() {
     //   3: "20170619L2000O02803",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2066,8 +2090,8 @@ function dataFromCvs() {
     //   3: "20170316L2000O03375",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2084,8 +2108,8 @@ function dataFromCvs() {
     //   3: "20170316L2000O03375",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2102,8 +2126,8 @@ function dataFromCvs() {
     //   3: "20171016L2000E00017",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2120,8 +2144,8 @@ function dataFromCvs() {
     //   3: "20171218L2000O02510",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2138,8 +2162,8 @@ function dataFromCvs() {
     //   3: "20171218L2000O02510",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2156,8 +2180,8 @@ function dataFromCvs() {
     //   3: "20170918L2000O03305",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2174,8 +2198,8 @@ function dataFromCvs() {
     //   3: "20170918L2000O03305",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2192,8 +2216,8 @@ function dataFromCvs() {
     //   3: "20171107L2000E04166",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2210,8 +2234,8 @@ function dataFromCvs() {
     //   3: "20171022L2000E00027",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2228,8 +2252,8 @@ function dataFromCvs() {
     //   3: "20171109L2000E00452",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2246,8 +2270,8 @@ function dataFromCvs() {
     //   3: "20171023L2000I00590",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2264,8 +2288,8 @@ function dataFromCvs() {
     //   3: "20171019L2000E00421",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2282,8 +2306,8 @@ function dataFromCvs() {
     //   3: "20171024L2000I00639",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2300,8 +2324,8 @@ function dataFromCvs() {
     //   3: "20171018L2000E00426",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2318,8 +2342,8 @@ function dataFromCvs() {
     //   3: "20171017L2000E00363",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2336,8 +2360,8 @@ function dataFromCvs() {
     //   3: "20171030L2000I00547",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2354,8 +2378,8 @@ function dataFromCvs() {
     //   3: "20171020L2000E00427",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2372,8 +2396,8 @@ function dataFromCvs() {
     //   3: "20180116L2000O02274",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2390,8 +2414,8 @@ function dataFromCvs() {
     //   3: "20180116L2000O02274",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2408,8 +2432,8 @@ function dataFromCvs() {
     //   3: "20180213L2000O02261",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2426,8 +2450,8 @@ function dataFromCvs() {
     //   3: "20180213L2000O02261",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2444,8 +2468,8 @@ function dataFromCvs() {
     //   3: "20180322L2000O03564",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2462,8 +2486,8 @@ function dataFromCvs() {
     //   3: "20180424L2000O02331",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2480,8 +2504,8 @@ function dataFromCvs() {
     //   3: "20180424L2000O02331",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2498,8 +2522,8 @@ function dataFromCvs() {
     //   3: "20180619L2000O02190",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2516,8 +2540,8 @@ function dataFromCvs() {
     //   3: "20180619L2000O02190",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2534,8 +2558,8 @@ function dataFromCvs() {
     //   3: "20180621L2000E03857",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2552,8 +2576,8 @@ function dataFromCvs() {
     //   3: "20180814L2000O02186",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0094",
-    //   exam_nm: "ESR (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0094",
+    //   examNm: "ESR (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2570,8 +2594,8 @@ function dataFromCvs() {
     //   3: "20180814L2000O02186",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2588,8 +2612,8 @@ function dataFromCvs() {
     //   3: "20180903L2000O02769",
     //   4: "GI",
     //   5: "소화기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2606,8 +2630,8 @@ function dataFromCvs() {
     //   3: "20010312L2000O00188",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2624,8 +2648,8 @@ function dataFromCvs() {
     //   3: "20010329L2000O00695",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2642,8 +2666,8 @@ function dataFromCvs() {
     //   3: "20010221L2000I00298",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2660,8 +2684,8 @@ function dataFromCvs() {
     //   3: "20010202L2000O00488",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2678,8 +2702,8 @@ function dataFromCvs() {
     //   3: "20010126L2000O00424",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2696,8 +2720,8 @@ function dataFromCvs() {
     //   3: "20010223L2000I00726",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2714,8 +2738,8 @@ function dataFromCvs() {
     //   3: "20010222L2000I00165",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0096",
-    //   exam_nm: "Reticulocyte & IRF (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0096",
+    //   examNm: "Reticulocyte & IRF (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2732,8 +2756,8 @@ function dataFromCvs() {
     //   3: "20010220L2000I00573",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2750,8 +2774,8 @@ function dataFromCvs() {
     //   3: "20010409L2000O00165",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2768,8 +2792,8 @@ function dataFromCvs() {
     //   3: "20010227L2000I00058",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2786,8 +2810,8 @@ function dataFromCvs() {
     //   3: "20010926L2000O00398",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2804,8 +2828,8 @@ function dataFromCvs() {
     //   3: "20010609L2000O00215",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2822,8 +2846,8 @@ function dataFromCvs() {
     //   3: "20010808L2000O00230",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2840,8 +2864,8 @@ function dataFromCvs() {
     //   3: "20011128L2000O00179",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2858,8 +2882,8 @@ function dataFromCvs() {
     //   3: "20010509L2000O00483",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2876,8 +2900,8 @@ function dataFromCvs() {
     //   3: "20010416L2000O00145",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2894,8 +2918,8 @@ function dataFromCvs() {
     //   3: "20010706L2000O00359",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2912,8 +2936,8 @@ function dataFromCvs() {
     //   3: "20011226L2000O00723",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2930,8 +2954,8 @@ function dataFromCvs() {
     //   3: "20020309L2000O00091",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -2948,8 +2972,8 @@ function dataFromCvs() {
     //   3: "20110513L2000I00688",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2966,8 +2990,8 @@ function dataFromCvs() {
     //   3: "20110512L2000I00501",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -2984,8 +3008,8 @@ function dataFromCvs() {
     //   3: "20110518L2000I00189",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3002,8 +3026,8 @@ function dataFromCvs() {
     //   3: "20110530L2000O01455",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3020,8 +3044,8 @@ function dataFromCvs() {
     //   3: "20110516L2000I00078",
     //   4: "PLM",
     //   5: "호흡기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3038,8 +3062,8 @@ function dataFromCvs() {
     //   3: "20070403L2000O00894",
     //   4: "URO",
     //   5: "비뇨기과",
-    //   exam_cd:"AC0092",
-    //   exam_nm: "Hct (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0092",
+    //   examNm: "Hct (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -3056,8 +3080,8 @@ function dataFromCvs() {
     //   3: "20070403L2000O00894",
     //   4: "URO",
     //   5: "비뇨기과",
-    //   exam_cd:"AC0089",
-    //   exam_nm: "WBC (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0089",
+    //   examNm: "WBC (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -3074,8 +3098,8 @@ function dataFromCvs() {
     //   3: "20070403L2000O00894",
     //   4: "URO",
     //   5: "비뇨기과",
-    //   exam_cd:"AC0091",
-    //   exam_nm: "Hb (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0091",
+    //   examNm: "Hb (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -3092,8 +3116,8 @@ function dataFromCvs() {
     //   3: "20070403L2000O00894",
     //   4: "URO",
     //   5: "비뇨기과",
-    //   exam_cd:"AC0093",
-    //   exam_nm: "Platelet (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0093",
+    //   examNm: "Platelet (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -3110,8 +3134,8 @@ function dataFromCvs() {
     //   3: "20070403L2000O00894",
     //   4: "URO",
     //   5: "비뇨기과",
-    //   exam_cd:"AC0090",
-    //   exam_nm: "RBC (Qn)[ChemR/I],Blood",
+    //   examCd:"AC0090",
+    //   examNm: "RBC (Qn)[ChemR/I],Blood",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -3128,8 +3152,8 @@ function dataFromCvs() {
     //   3: "20090728L2000O02715",
     //   4: "URO",
     //   5: "비뇨기과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3146,8 +3170,8 @@ function dataFromCvs() {
     //   3: "19970721L2000O00137",
     //   4: "ALG",
     //   5: "알레르기내과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0091",
     //   11: "AC0091",
@@ -3164,8 +3188,8 @@ function dataFromCvs() {
     //   3: "20110511L2000E02617",
     //   4: "EM",
     //   5: "응급의학과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3182,8 +3206,8 @@ function dataFromCvs() {
     //   3: "20180622L2000E02972",
     //   4: "EM",
     //   5: "응급의학과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3200,8 +3224,8 @@ function dataFromCvs() {
     //   3: "20190225L2000E01225",
     //   4: "EM",
     //   5: "응급의학과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
@@ -3218,8 +3242,8 @@ function dataFromCvs() {
     //   3: "20190224L2000E01311",
     //   4: "EM",
     //   5: "응급의학과",
-    //   exam_cd:"AC0085",
-    //   exam_nm: "CBC (Qn)[ChemR/I],Blood(G)",
+    //   examCd:"AC0085",
+    //   examNm: "CBC (Qn)[ChemR/I],Blood(G)",
     //   9: 99,
     //   10: "AC0085",
     //   11: "AC0091",
