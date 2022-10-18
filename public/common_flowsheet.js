@@ -88,24 +88,29 @@ const gridOptions = {
     
   },
   onCellClicked: function (event) {
-    console.log(event);
-    
+    console.log("DS", myChart.data.datasets.length, event);
+   
+    /* 그리드 선택된 cell 컬럼 전체 선택 color 변경 */
     var cols = [];
     if (selectedColumn)
       cols.push(selectedColumn.field);
     selectedColumn = event.column.colDef;
     cols.push(selectedColumn.field);
-    console.log(cols);
     gridOptions.api.refreshCells({ force: true, columns: cols});
-    console.log("selectedColumn",selectedColumn);
+
+
+    /* 라인차트 컬러 설정 */
     const dsColor = lineColor[myChart.data.datasets.length]; //Utils.namedColor(myChart.data.datasets.length);
     const dbase = dgroup.get(event.data.examCd);
     
-    // active 항목 없앰.
+    // active 항목 없앰. 
     myChart.setActiveElements([{}]);
+    // low, up limit 라인을 없앤다. 마지막 2개.
+
     if(myChart.data.datasets.length>2)
       myChart.data.datasets.splice(myChart.data.datasets.length - 2, 2);
-    // 검사 데이터가 안되어 있으면...
+    
+    // 검사 데이터 바인딩이  안되어 있으면...
     if (!myChart.data.datasets.find((x) => x.label === event.data.flwsClauNm) ) {
 
       const lb = event.data.flwsClauNm;
@@ -131,11 +136,8 @@ const gridOptions = {
           align: "top",
         },
         yAxisID: 'y'+event.rowIndex,
-        // labels: Object.values(event.data),
+
       };
-
-
-
 
       myChart.data.datasets.push(newDataset);
       addItemDiv(dbase[0],dsColor);
@@ -143,7 +145,7 @@ const gridOptions = {
     }
    
 
-    // ACTIVATION 차트
+    // Activation 차트 // 선을 좀 강화 ? 필요없음 빼자
     if (myChart.data.datasets.length > 0 && event.column.instanceId > 0) {
       // 차트 active 없앰
 
@@ -170,10 +172,6 @@ const gridOptions = {
 
     // myChart.data.datasets.push(newDataset3);
     myChart.update();
-
-    // grid cell 전체 에 색 
-    
-
   },
 };
 
