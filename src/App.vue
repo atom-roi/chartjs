@@ -17,6 +17,26 @@
 <script>
 export default {
   name: "App",
+   methods: {
+    getData() {
+      this.$axios
+        .get("/getData")
+        .then((res) => {
+          console.log(res.staus);
+          console.log(res.data);
+        })
+        .catch((error) => {
+          console.log(error);
+        })
+        .finally(() => {
+          console.log("항상 마지막에 실행");
+        });
+    },
+
+  },
+  beforeMount(){
+    this.getData();
+  }
 };
 </script>
 
