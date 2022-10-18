@@ -63,8 +63,7 @@ const chartConfig = {
       y2: {
           display:false
         },
-    
-
+       
     },
     elements: {
       point: {
@@ -77,6 +76,8 @@ const chartConfig = {
 const gridOptions = {
   columnDefs: [],
   rowData: [],
+  rowSelection: 'single',
+  enableRangeSelection:true,
   defaultColDef: {
     editable: false,
     resizable: false,
@@ -84,11 +85,18 @@ const gridOptions = {
     wrapText: true,
     width: 60,
     autoHeight: true,
+    
   },
   onCellClicked: function (event) {
     console.log(event);
+    
+    var cols = [];
+    if (selectedColumn)
+      cols.push(selectedColumn.field);
     selectedColumn = event.column.colDef;
-    event.api.redrawRows();
+    cols.push(selectedColumn.field);
+    console.log(cols);
+    gridOptions.api.refreshCells({ force: true, columns: cols});
     console.log("selectedColumn",selectedColumn);
     const dsColor = lineColor[myChart.data.datasets.length]; //Utils.namedColor(myChart.data.datasets.length);
     const dbase = dgroup.get(event.data.examCd);
@@ -234,7 +242,7 @@ function getColumDefs() {
     //console.log(columnDefs.filter((c) => c.headerName === x.dgiRcepDt).length);
     if (colums.filter((c) => c.field === x.dgiRcepDt).length == 0)
       colums.push({
-        headerName: x.dgiRcepDt.replace(/(\d{4})(\d{2})(\d{2})/g, '$1 $2-$3'),
+        headerName: x.dgiRcepDt.replace(/(\d{4})(\d{2})(\d{2})/g, '$1 $2/$3'),
         field: x.dgiRcepDt,//s.replace(/(\d{4})(\d{2})(\d{2})/g, '$1-$2-$3');
         cellStyle: params => {
 
@@ -245,7 +253,7 @@ function getColumDefs() {
             //mark police cells as red
             return { backgroundColor: '#aab6fe', textAlign: 'center' };
           }
-          return { textAlign: 'center' };
+          return { textAlign: 'center', backgroundColor:"transparent" };
         },
         
       });
