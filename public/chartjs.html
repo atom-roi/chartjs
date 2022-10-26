@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-
+  <script src="flowsheetData.js"></script>
   <script src="utils.js"></script>
   <script src="chart.min.js?v2"></script>
   <script src="common_flowsheet.js?v4"></script>
@@ -27,16 +27,28 @@
       text-align: center;
       white-space: break-spaces;
     }
-    .ag-cell-value{
-      min-width:20px;
-      min-height:24px;
-    }
+      .ag-cell-wrap-text {
+          white-space: inherit;
+           word-break: break-all;
+        }
+      .ag-cell-value {
+        min-width: 20px;
+        min-height: 24px;
+      }
+    .ag-theme-balham .ag-ltr .ag-cell {
+         border-right: 1px solid rgb(217,220,222);
+       }
     .ag-theme-balham .ag-header {
       font-family: "맑은 고딕";
     }
 
+
+    .ag-root-wrapper {
+    border: solid 1px;
+    border-color: var(--ag-border-color, #babfc7) !important;
+}
     /* .ag-header-cell-label {
-       
+
     } */
 
     .itemPan {
@@ -45,10 +57,9 @@
       font-size: 9pt;
       font-family: "맑은 고딕";
       position: absolute;
-      z-index: 200;
-    
       background-color: gainsboro;
       height:300px;
+      border: 1px solid grey;
     }
 
     .chartAreaWrapper2 {
@@ -67,61 +78,85 @@
 
     .itemPan li {
       display: flow-root;
-
       padding: 5px;
-
     }
 
     .itemPan li:nth-child(even) {
       background-color: white;
       padding: 5px;
+      
     }
+    .custom-tooltip {
+          position: absolute;
+          margin:10px;
+          height: 70px;
+          border: 1px solid cornflowerblue;
+          overflow: hidden;
+          pointer-events: none;
+          transition: opacity 1s;
+      }
+
+      .custom-tooltip.ag-tooltip-hiding {
+          opacity: 0;
+      }
+
+      .custom-tooltip p {
+          margin: 5px;
+          white-space: nowrap;
+      }
+
+      .custom-tooltip p:first-of-type {
+          font-weight: bold;
+      }
   </style>
-</head>
-
-<body>
-  <div id="itemPan" class="itemPan">
-    <div style="background-color: darkseagreen;">항목</div>
-    <ul id="itemul">
-    </ul>
-  </div>
- 
-  </div>
-  <div style="position:absolute;width: 90%;overflow: auto;background: white;border: 1px solid beige;"
-    id="fsheet">
-
-    <div class="chartAreaWrapper" style="height:300px;margin-left:143px;                                                             ;">
-      <div class="chartAreaWrapper2" id="chartContainer" style="height:310px;">
-        <canvas id="myChart" height="310"></canvas>
+  <!--h1>ttt${patientId}</h1-->
+ <div style="position: absolute;width: 98%;overflow: auto;background: white;" id="fsheet">
+      <!--button onclick="$('#fsheet').hide();" style="float: right; margin: 15px">X</button -->
+      <div id="itemPan" class="itemPan">
+        <div style="background-color: darkseagreen;padding:15px;border-bottom:1px solid grey">항목</div>
+        <ul id="itemul"></ul>
+        <div onclick="clearDataset();" style="border: 1px solid;margin: 5px;padding: 5px;position: absolute;width: 85%;bottom:0px">
+          초기화
+        </div>
       </div>
-    </div>
+      <div class="chartAreaWrapper" style="height: 300px; margin-left: 143px">
+        <div
+          class="chartAreaWrapper2"
+          id="chartContainer"
+          style="height: 310px"
+        >
+          <canvas id="myChart" height="310"></canvas>
+        </div>
+      </div>
+      <div style="background-color: yellow;display: none;font-size:10pt" id="mediAlert">test</div>
+      <div id="divmyGrid">
+        <div
+          id="myGrid"
+          style="display: block; box-sizing: border-box; height: 500px"
+          class="ag-theme-balham"
+        ></div>
+      </div>
+ </div>
+
+  <script>
+    var d3v5 = d3;
+    window.d3 = null;
+    const Utils = ChartUtils.init();
+    const NUMBER_CFG = { count: 7, min: 0, max: 100 };
 
   
-      <div  id="divmyGrid">
-        <div id="myGrid" style="display: block; box-sizing: border-box; height: 200px; " class="ag-theme-balham"></div>
-      </div>
-    </div>
-    <button onclick="$('#fsheet').hide();" style="float:right;margin:15px">X</button>
+    document.addEventListener("DOMContentLoaded", function () {
+      // $.get(
+      //   "/pmp/patient/getFlowsheetData?patientId=0000494434",
+      //   function (data) {
+           
+      //   }
+      // );
 
-    <script>
-      var d3d5 = d3;
-      window.d3 = null;
-      const Utils = ChartUtils.init();
-      const NUMBER_CFG = { count: 7, min: 0, max: 100 };
-      var fsData;
-      document.addEventListener("DOMContentLoaded", function () {
-
-        $.get('/data.html', function(data) {
-            
-          fsData = JSON.parse(data);     
-          createGrid("#myGrid");
-          createChart("#myChart");
-        });
-
-
-      
-      });
-    </script>
+      createGrid("#myGrid");
+      createChart("#myChart");
+    });
+  </script>
 
 </body>
 
